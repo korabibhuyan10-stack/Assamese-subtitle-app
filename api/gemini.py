@@ -2,7 +2,9 @@ import google.generativeai as genai
 import os, time
 
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-model = genai.GenerativeModel("gemini-1.5-flash")
+# Adding 'models/' helps the API find the correct path
+model = genai.GenerativeModel("models/gemini-1.5-flash")
+
 
 def transcribe_assamese(video_path):
     print(f"Uploading: {video_path}")
