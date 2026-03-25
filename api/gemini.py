@@ -3,7 +3,6 @@ import os, time
 
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 # Adding 'models/' helps the API find the correct path
-model = genai.GenerativeModel("models/gemini-1.5-flash")
 
 
 def transcribe_assamese(video_path):
