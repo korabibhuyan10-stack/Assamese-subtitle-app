@@ -15,8 +15,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-os.makedirs("uploads", exist_ok=True)
-os.makedirs("outputs", exist_ok=True)
+# Vercel only allows writing to the /tmp directory
+UPLOAD_DIR = "/tmp/uploads"
+OUTPUT_DIR = "/tmp/outputs"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
 
 @app.get("/", response_class=HTMLResponse)
 def home():
@@ -31,8 +35,8 @@ async def transcribe(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail=f"File type .{ext} not supported")
 
     job_id = str(uuid.uuid4())[:8]
-    save_path = f"uploads/{job_id}.{ext}"
-
+    save_path = f"{UPLOAD_DIR}/{job_id}.{ext}" 
+    
     with open(save_path, "wb") as f:
         shutil.copyfileobj(file.file, f)
 
@@ -66,7 +70,7 @@ async def export(request: Request):
         content = to_vtt(segments)
         filename = f"{job_id}.vtt"
 
-    out_path = f"outputs/{filename}"
+    out_path = f"{OUTPUT_DIR}/{filename}"
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(content)
 
