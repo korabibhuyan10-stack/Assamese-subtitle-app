@@ -8,7 +8,7 @@ model = genai.GenerativeModel("models/gemini-1.5-flash")
 
 def transcribe_assamese(video_path):
     print(f"Uploading: {video_path}")
-    video_file = genai.upload_file(path=video_path)
+    model = genai.GenerativeModel("gemini-2.0-flash")
 
     while video_file.state.name == "PROCESSING":
         time.sleep(2)
