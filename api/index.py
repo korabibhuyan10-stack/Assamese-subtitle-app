@@ -3,8 +3,9 @@ from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import os, shutil, uuid
 
-from gemini import transcribe_assamese
-from subtitle import to_srt, to_vtt
+from .gemini import transcribe_assamese
+from .subtitle import to_srt, to_vtt
+
 
 app = FastAPI()
 
