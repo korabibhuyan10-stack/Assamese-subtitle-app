@@ -1,7 +1,7 @@
 import google.generativeai as genai
 import os, time
 
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+genai.configure(api_key=os.environ.get("AIzaSyBxDs9Q9LMdlHTGBCNjHnwIaRcTCWPb1QQ"))
 model = genai.GenerativeModel("gemini-1.5-flash")
 
 def transcribe_assamese(video_path):
