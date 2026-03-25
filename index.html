@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="as">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>অসমীয়া Subtitle Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',sans-serif;background:#0f0f13;color:#e8e6f0;min-height:100vh}
+  .assamese{font-family:'Noto Sans Bengali',sans-serif}
+
+  header{padding:20px 20px 0;text-align:center}
+  header h1{font-size:22px;font-weight:600;color:#fff}
+  header p{font-size:13px;color:#888;margin-top:4px}
+
+  .screen{display:none;padding:20px;max-width:520px;margin:0 auto}
+  .screen.active{display:block}
+
+  /* Upload screen */
+  .upload-box{border:2px dashed #333;border-radius:16px;padding:40px 20px;text-align:center;margin:24px 0;cursor:pointer;transition:border-color 0.2s}
+  .upload-box:hover,.upload-box.drag{border-color:#7c6fff}
+  .upload-box input{display:none}
+  .upload-icon{font-size:40px;margin-bottom:12px}
+  .upload-box h2{font-size:16px;font-weight:500;margin-bottom:6px}
+  .upload-box p{font-size:13px;color:#666}
+  .file-info{background:#1a1a24;border-radius:10px;padding:14px;margin-bottom:16px;display:none}
+  .file-info p{font-size:13px;color:#aaa}
+  .file-info strong{color:#fff}
+
+  /* Buttons */
+  .btn{width:100%;padding:14px;border-radius:12px;font-size:15px;font-weight:500;border:none;cursor:pointer;transition:opacity 0.2s}
+  .btn:disabled{opacity:0.4;cursor:not-allowed}
+  .btn-primary{background:#7c6fff;color:#fff}
+  .btn-primary:hover:not(:disabled){opacity:0.85}
+  .btn-outline{background:transparent;color:#7c6fff;border:1.5px solid #7c6fff;margin-top:10px}
+
+  /* Progress screen */
+  .progress-card{background:#1a1a24;border-radius:16px;padding:24px;margin:24px 0}
+  .progress-title{font-size:15px;font-weight:500;margin-bottom:20px;color:#fff}
+  .progress-step{margin-bottom:16px}
+  .progress-step-head{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px}
+  .progress-step-head span{color:#aaa}
+  .progress-step-head .status{color:#7c6fff}
+  .progress-step-head .status.done{color:#4ade80}
+  .bar-bg{height:4px;background:#2a2a38;border-radius:4px}
+  .bar-fill{height:4px;background:#7c6fff;border-radius:4px;width:0%;transition:width 0.6s ease}
+  .bar-fill.done{background:#4ade80;width:100%}
+
+  /* Editor screen */
+  .editor-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+  .editor-toolbar h2{font-size:16px;font-weight:500}
+  .seg-count{font-size:12px;color:#888;background:#1a1a24;padding:4px 10px;border-radius:20px}
+  .segment{background:#1a1a24;border-radius:12px;padding:14px;margin-bottom:10px;border:1.5px solid transparent}
+  .segment.editing{border-color:#7c6fff}
+  .seg-time{font-size:11px;color:#666;margin-bottom:6px;font-family:'Inter',monospace}
+  .seg-text{font-size:15px;color:#e8e6f0;width:100%;background:transparent;border:none;outline:none;resize:none;font-family:'Noto Sans Bengali',sans-serif;line-height:1.6}
+  .export-bar{position:sticky;bottom:0;background:#0f0f13;padding:16px 0 20px;margin-top:8px}
+  .export-row{display:flex;gap:10px}
+  .export-row .btn{margin:0}
+
+  /* Success toast */
+  .toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#4ade80;color:#000;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:500;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999}
+  .toast.show{opacity:1}
+
+  .tip{font-size:12px;color:#555;text-align:center;margin-top:12px;line-height:1.6}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎬 অসমীয়া Subtitle</h1>
+  <p>Upload your video — get Assamese subtitles</p>
+</header>
+
+<!-- Screen 1: Upload -->
+<div class="screen active" id="screen-upload">
+  <div class="upload-box" id="upload-box" onclick="document.getElementById('file-input').click()">
+    <input type="file" id="file-input" accept="video/*,audio/*" onchange="onFileSelect(this)">
+    <div class="upload-icon">📁</div>
+    <h2>Tap to select video</h2>
+    <p>MP4 · MOV · WebM · MKV<br>also MP3 · WAV · M4A</p>
+  </div>
+
+  <div class="file-info" id="file-info">
+    <p>Selected: <strong id="file-name"></strong></p>
+    <p id="file-size" style="margin-top:4px"></p>
+  </div>
+
+  <button class="btn btn-primary" id="upload-btn" onclick="startUpload()" disabled>
+    Generate Assamese Subtitles
+  </button>
+  <p class="tip">Your video is processed by Google Gemini AI.<br>It stays private and is deleted after transcription.</p>
+</div>
+
+<!-- Screen 2: Processing -->
+<div class="screen" id="screen-progress">
+  <div class="progress-card">
+    <p class="progress-title">Processing your video...</p>
+
+    <div class="progress-step">
+      <div class="progress-step-head">
+        <span>Uploading file</span>
+        <span class="status" id="st-upload">waiting</span>
+      </div>
+      <div class="bar-bg"><div class="bar-fill" id="bar-upload"></div></div>
+    </div>
+
+    <div class="progress-step">
+      <div class="progress-step-head">
+        <span>Gemini AI transcribing</span>
+        <span class="status" id="st-transcribe">waiting</span>
+      </div>
+      <div class="bar-bg"><div class="bar-fill" id="bar-transcribe"></div></div>
+    </div>
+
+    <div class="progress-step">
+      <div class="progress-step-head">
+        <span>Building subtitles</span>
+        <span class="status" id="st-build">waiting</span>
+      </div>
+      <div class="bar-bg"><div class="bar-fill" id="bar-build"></div></div>
+    </div>
+  </div>
+  <p class="tip">This usually takes 1–3 minutes.<br>Keep this screen open.</p>
+</div>
+
+<!-- Screen 3: Editor -->
+<div class="screen" id="screen-editor">
+  <div class="editor-toolbar">
+    <h2>Edit Subtitles</h2>
+    <span class="seg-count" id="seg-count">0 segments</span>
+  </div>
+
+  <div id="segments-list"></div>
+
+  <div class="export-bar">
+    <div class="export-row">
+      <button class="btn btn-primary" onclick="exportFile('srt')">Download .srt</button>
+      <button class="btn btn-outline" onclick="exportFile('vtt')">Download .vtt</button>
+    </div>
+    <button class="btn btn-outline" style="margin-top:10px" onclick="goBack()">↩ Upload another video</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let selectedFile = null;
+let currentJobId = null;
+let currentSegments = [];
+
+function onFileSelect(input) {
+  const file = input.files[0];
+  if (!file) return;
+  selectedFile = file;
+
+  document.getElementById('file-name').textContent = file.name;
+  const mb = (file.size / 1024 / 1024).toFixed(1);
+  document.getElementById('file-size').textContent = `Size: ${mb} MB`;
+  document.getElementById('file-info').style.display = 'block';
+  document.getElementById('upload-btn').disabled = false;
+}
+
+// Drag and drop support
+const box = document.getElementById('upload-box');
+box.addEventListener('dragover', e => { e.preventDefault(); box.classList.add('drag'); });
+box.addEventListener('dragleave', () => box.classList.remove('drag'));
+box.addEventListener('drop', e => {
+  e.preventDefault();
+  box.classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    selectedFile = file;
+    document.getElementById('file-name').textContent = file.name;
+    const mb = (file.size / 1024 / 1024).toFixed(1);
+    document.getElementById('file-size').textContent = `Size: ${mb} MB`;
+    document.getElementById('file-info').style.display = 'block';
+    document.getElementById('upload-btn').disabled = false;
+  }
+});
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function setStep(step, state) {
+  const st = document.getElementById(`st-${step}`);
+  const bar = document.getElementById(`bar-${step}`);
+  if (state === 'loading') {
+    st.textContent = 'processing...';
+    st.className = 'status';
+    bar.style.width = '60%';
+  } else if (state === 'done') {
+    st.textContent = 'done ✓';
+    st.className = 'status done';
+    bar.classList.add('done');
+  }
+}
+
+async function startUpload() {
+  if (!selectedFile) return;
+  showScreen('screen-progress');
+
+  setStep('upload', 'loading');
+
+  const formData = new FormData();
+  formData.append('file', selectedFile);
+
+  let data;
+  try {
+    const res = await fetch('/transcribe', { method: 'POST', body: formData });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Upload failed');
+    }
+    data = await res.json();
+  } catch (e) {
+    alert('Error: ' + e.message);
+    showScreen('screen-upload');
+    return;
+  }
+
+  setStep('upload', 'done');
+  setStep('transcribe', 'loading');
+
+  await new Promise(r => setTimeout(r, 800));
+  setStep('transcribe', 'done');
+  setStep('build', 'loading');
+
+  currentJobId = data.job_id;
+  currentSegments = data.segments;
+
+  await new Promise(r => setTimeout(r, 600));
+  setStep('build', 'done');
+
+  await new Promise(r => setTimeout(r, 400));
+  buildEditor(currentSegments);
+  showScreen('screen-editor');
+}
+
+function buildEditor(segments) {
+  const list = document.getElementById('segments-list');
+  list.innerHTML = '';
+  document.getElementById('seg-count').textContent = `${segments.length} segments`;
+
+  segments.forEach((seg, i) => {
+    const div = document.createElement('div');
+    div.className = 'segment';
+    div.innerHTML = `
+      <div class="seg-time">${formatTime(seg.start)} → ${formatTime(seg.end)}</div>
+      <textarea class="seg-text assamese" rows="2" data-index="${i}">${seg.text}</textarea>
+    `;
+    div.querySelector('textarea').addEventListener('focus', () => div.classList.add('editing'));
+    div.querySelector('textarea').addEventListener('blur', e => {
+      div.classList.remove('editing');
+      currentSegments[i].text = e.target.value;
+    });
+    list.appendChild(div);
+  });
+}
+
+function formatTime(s) {
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = Math.floor(s % 60);
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+}
+
+async function exportFile(fmt) {
+  try {
+    const res = await fetch('/export', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        segments: currentSegments,
+        format: fmt,
+        job_id: currentJobId
+      })
+    });
+    if (!res.ok) throw new Error('Export failed');
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${currentJobId}.${fmt}`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast(`Downloaded ${currentJobId}.${fmt}`);
+  } catch(e) {
+    alert('Export error: ' + e.message);
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function goBack() {
+  selectedFile = null;
+  currentSegments = [];
+  currentJobId = null;
+  document.getElementById('file-input').value = '';
+  document.getElementById('file-info').style.display = 'none';
+  document.getElementById('upload-btn').disabled = true;
+  ['upload','transcribe','build'].forEach(s => {
+    document.getElementById(`st-${s}`).textContent = 'waiting';
+    document.getElementById(`st-${s}`).className = 'status';
+    document.getElementById(`bar-${s}`).style.width = '0';
+    document.getElementById(`bar-${s}`).classList.remove('done');
+  });
+  showScreen('screen-upload');
+}
+</script>
+</body>
+</html>
+```
+
+---
+
+## STEP 4 — Add your API key in Replit
+
+1. Tap the **lock icon** in the left sidebar
+2. Tap **+ Add Secret**
+3. Key: `GEMINI_API_KEY`
+4. Value: paste your key from Step 1
+5. Tap **Save**
+
+---
+
+## STEP 5 — Set the run command
+
+In Replit tap **Shell** at the bottom and type:
+```
+uvicorn main:app --host 0.0.0.0 --port 8080
