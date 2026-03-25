@@ -8,6 +8,7 @@ genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 def transcribe_assamese(video_path):
     print(f"Uploading: {video_path}")
     model = genai.GenerativeModel("gemini-2.0-flash")
+    video_file = genai.upload_file(video_path)
 
     while video_file.state.name == "PROCESSING":
         time.sleep(2)
